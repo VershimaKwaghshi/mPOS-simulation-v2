@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>mPOS — Live Settlement Simulation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #0d1117; color: #e0e0e0; min-height: 100vh; overflow-x: hidden; }
+
+    /* TOP BAR */
+    .top-bar { background: #1a1a2e; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #C9972B; position: sticky; top: 0; z-index: 100; }
+    .logo-mark { font-size: 20px; font-weight: 900; letter-spacing: 4px; color: white; border-bottom: 3px solid #C9972B; padding-bottom: 3px; }
+    .logo-sub { font-size: 9px; color: #B8D4F0; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+    .live-badge { font-size: 11px; color: #4CAF50; background: rgba(76,175,80,0.1); padding: 5px 14px; border-radius: 20px; border: 1px solid #4CAF50; }
+
+    /* GATE */
+    .gate-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: linear-gradient(135deg, #0d1117 0%, #1a1a2e 100%); }
+    .gate-box { background: #161b22; border: 1px solid #30363d; border-radius: 16px; padding: 30px 26px; max-width: 420px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .gate-logo { text-align: center; margin-bottom: 20px; }
+    .gate-logo-mark { font-size: 30px; font-weight: 900; letter-spacing: 5px; color: #1B4F8C; border-bottom: 3px solid #C9972B; padding-bottom: 4px; display: inline-block; }
+    .gate-logo-sub { font-size: 10px; color: #8b949e; letter-spacing: 2px; text-transform: uppercase; margin-top: 6px; }
+    .gate-title { font-size: 14px; font-weight: bold; color: white; text-align: center; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+    .gate-subtitle { font-size: 12px; color: #8b949e; text-align: center; margin-bottom: 18px; line-height: 1.7; }
+    .ip-notice { background: rgba(201,151,43,0.1); border: 1px solid #C9972B; border-radius: 10px; padding: 13px; margin-bottom: 16px; font-size: 11px; color: #C9972B; line-height: 1.7; }
+    .ip-notice strong { display: block; margin-bottom: 5px; letter-spacing: 1px; }
+    .gate-input { width: 100%; padding: 12px 14px; border: 1px solid #30363d; border-radius: 8px; font-size: 13px; background: #0d1117; color: white; margin-bottom: 12px; }
+    .gate-input:focus { outline: none; border-color: #1B4F8C; }
+    .gate-input::placeholder { color: #484f58; }
+    .gate-ack { background: rgba(27,79,140,0.1); border: 1px solid #1B4F8C33; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+    .gate-ack-title { font-size: 11px; font-weight: bold; color: #B8D4F0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .gate-ack-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; font-size: 11px; color: #8b949e; line-height: 1.5; }
+    .gate-ack-item input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; accent-color: #1B4F8C; }
+    .gate-btn { width: 100%; padding: 14px; background: #1B4F8C; color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.3s; letter-spacing: 1px; }
+    .gate-btn:hover { background: #C9972B; }
+    .gate-error { color: #e53935; font-size: 11px; text-align: center; margin-top: 10px; display: none; background: rgba(229,57,53,0.1); padding: 8px; border-radius: 6px; }
+    .gate-success { text-align: center; padding: 20px; display: none; }
+    .gate-success .s-icon { font-size: 52px; margin-bottom: 14px; }
+    .gate-success .s-title { font-size: 18px; font-weight: bold; color: #4CAF50; margin-bottom: 8px; }
+    .gate-success .s-sub { font-size: 12px; color: #8b949e; margin-bottom: 18px; line-height: 1.6; }
+    .session-box { background: rgba(27,79,140,0.2); border: 1px solid #1B4F8C; border-radius: 10px; padding: 14px; margin-bottom: 18px; }
+    .session-id { font-size: 16px; font-weight: bold; letter-spacing: 3px; color: white; margin-top: 6px; }
+
+    /* SIM APP */
+    .sim-app { display: none; }
+    .session-bar { background: #1B4F8C; color: #B8D4F0; font-size: 10px; text-align: center; padding: 6px; letter-spacing: 1px; }
+    .info-bar { background: #161b22; color: #484f58; font-size: 10px; text-align: center; padding: 6px; letter-spacing: 1px; border-bottom: 1px solid #21262d; }
+
+    /* INPUT PANEL */
+    .input-panel { background: #161b22; border-bottom: 1px solid #21262d; padding: 16px 20px; max-width: 600px; margin: 0 auto; }
+    .input-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .input-field { flex: 1; min-width: 140px; }
+    .input-field label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 5px; }
+    .input-field input, .input-field select { width: 100%; padding: 10px 12px; border: 1px solid #30363d; border-radius: 8px; font-size: 13px; background: #0d1117; color: white; }
+    .input-field input:focus, .input-field select:focus { outline: none; border-color: #1B4F8C; }
+    .input-field input::placeholder { color: #484f58; }
+    .input-field select option { background: #161b22; }
+    .run-btn { padding: 11px 22px; background: linear-gradient(135deg, #1B4F8C, #C9972B); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: all 0.3s; letter-spacing: 0.5px; }
+    .run-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .run-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* FLOW CANVAS */
+    .flow-canvas { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
+
+    /* AMOUNT SUMMARY */
+    .amount-summary { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .amt-item { text-align: center; }
+    .amt-label { font-size: 9px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+    .amt-value { font-size: 16px; font-weight: bold; color: white; }
+    .amt-value.gold { color: #C9972B; }
+    .amt-value.green { color: #4CAF50; }
+    .amt-value.red { color: #e53935; }
+    .amt-divider { width: 1px; background: #21262d; height: 40px; }
+
+    /* NODE */
+    .node { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 14px 16px; margin-bottom: 6px; transition: all 0.4s; position: relative; overflow: hidden; }
+    .node.idle { opacity: 0.5; }
+    .node.active { border-color: #C9972B; background: #1a1a00; opacity: 1; }
+    .node.active::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #C9972B, transparent); animation: shimmer 1.5s infinite; }
+    .node.done { border-color: #4CAF50; background: rgba(76,175,80,0.05); opacity: 1; }
+    .node.error-node { border-color: #e53935; background: rgba(229,57,53,0.05); opacity: 1; }
+    @keyframes shimmer { 0% { left: -100%; } 100% { left: 100%; } }
+
+    .node-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .node-icon { font-size: 22px; }
+    .node-title { font-size: 13px; font-weight: bold; color: white; }
+    .node-subtitle { font-size: 10px; color: #8b949e; margin-top: 2px; }
+    .node-status { margin-left: auto; }
+
+    .node-body { display: none; }
+    .node.active .node-body, .node.done .node-body { display: block; }
+
+    .node-rows { margin-top: 8px; }
+    .node-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #0d1117; border-radius: 6px; margin-bottom: 5px; font-size: 11px; }
+    .node-row .nr-label { color: #8b949e; }
+    .node-row .nr-value { font-weight: bold; color: #B8D4F0; }
+    .node-row .nr-value.green { color: #4CAF50; }
+    .node-row .nr-value.gold { color: #C9972B; }
+    .node-row .nr-value.red { color: #e53935; }
+    .node-row .nr-value.blue { color: #58a6ff; }
+
+    /* STEP LIST */
+    .step-list { margin-top: 8px; }
+    .step-item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; font-size: 11px; color: #8b949e; border-bottom: 1px solid #21262d11; }
+    .step-item:last-child { border-bottom: none; }
+    .step-item .step-icon { flex-shrink: 0; font-size: 12px; margin-top: 1px; }
+    .step-item.step-done { color: #4CAF50; }
+    .step-item.step-active { color: #C9972B; }
+    .step-item.step-pending { color: #484f58; }
+
+    /* CONNECTOR */
+    .connector { display: flex; flex-direction: column; align-items: center; margin: 4px 0; }
+    .connector-line { width: 2px; height: 0; background: linear-gradient(180deg, #1B4F8C, #C9972B); transition: height 0.6s ease; border-radius: 2px; }
+    .connector-line.active { height: 30px; }
+    .connector-arrow { font-size: 14px; color: #484f58; transition: color 0.4s; }
+    .connector-arrow.active { color: #C9972B; }
+    .connector-label { font-size: 9px; color: #484f58; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; transition: color 0.4s; }
+    .connector-label.active { color: #C9972B; }
+
+    /* AGENT SPLIT */
+    .agent-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+
+    /* LEDGER SPLIT */
+    .ledger-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+    .ledger-entry { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 12px; transition: all 0.4s; }
+    .ledger-entry.active { border-color: #4CAF50; background: rgba(76,175,80,0.05); }
+    .ledger-title { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .ledger-row { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #21262d; }
+    .ledger-row:last-child { border-bottom: none; }
+    .ledger-row .lr-label { color: #484f58; }
+    .ledger-row .lr-value { font-weight: bold; }
+
+    /* BADGE */
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; }
+    .badge-green { background: rgba(76,175,80,0.15); color: #4CAF50; border: 1px solid rgba(76,175,80,0.3); }
+    .badge-gold { background: rgba(201,151,43,0.15); color: #C9972B; border: 1px solid rgba(201,151,43,0.3); }
+    .badge-blue { background: rgba(27,79,140,0.2); color: #58a6ff; border: 1px solid rgba(27,79,140,0.4); }
+    .badge-red { background: rgba(229,57,53,0.15); color: #e53935; border: 1px solid rgba(229,57,53,0.3); }
+    .badge-grey { background: rgba(255,255,255,0.05); color: #8b949e; border: 1px solid #30363d; }
+
+    /* SETTLED BOX */
+    .settled-box { background: rgba(76,175,80,0.08); border: 2px solid #4CAF50; border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 20px; display: none; }
+    .settled-box.show { display: block; animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .settled-icon { font-size: 48px; margin-bottom: 10px; }
+    .settled-title { font-size: 18px; font-weight: bold; color: #4CAF50; margin-bottom: 4px; letter-spacing: 2px; }
+    .settled-ref { font-size: 12px; color: #C9972B; margin-bottom: 14px; letter-spacing: 2px; }
+    .settled-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .settled-item { background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 10px; text-align: center; }
+    .settled-item .si-label { font-size: 9px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .settled-item .si-value { font-size: 13px; font-weight: bold; color: white; }
+    .settled-item .si-value.green { color: #4CAF50; }
+    .settled-item .si-value.gold { color: #C9972B; }
+
+    /* HISTORY */
+    .history-panel { max-width: 600px; margin: 0 auto 20px auto; padding: 0 16px; }
+    .history-title { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .history-item { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 10px 12px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+    .hi-ref { color: #B8D4F0; font-weight: bold; }
+    .hi-detail { color: #8b949e; font-size: 10px; margin-top: 2px; }
+    .hi-amount { text-align: right; }
+    .hi-sent { color: #8b949e; font-size: 10px; }
+    .hi-received { color: #4CAF50; font-weight: bold; }
+
+    /* IP FOOTER */
+    .ip-footer { background: #161b22; color: #30363d; font-size: 9px; text-align: center; padding: 10px 16px; line-height: 1.6; border-top: 1px solid #21262d; }
+
+    /* PULSE */
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .pulsing { animation: pulse 1s infinite; }
+
+    /* ACCOUNT MINI */
+    .account-mini { background: linear-gradient(135deg, #1B4F8C, #0d2a4a); border-radius: 8px; padding: 10px 12px; margin-top: 6px; border: 1px solid #1B4F8C44; }
+    .am-label { font-size: 9px; color: #B8D4F0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    .am-value { font-size: 15px; font-weight: bold; color: white; }
+    .am-divider { border: none; border-top: 1px solid rgba(255,255,255,0.15); margin: 6px 0; }
+    .am-sub-label { font-size: 9px; color: #B8D4F0; margin-bottom: 2px; }
+    .am-sub-value { font-size: 13px; font-weight: bold; color: #B8D4F0; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div>
+    <div class="logo-mark">mPOS</div>
+    <div class="logo-sub">Mobile Point of Service — PLeNat Technologies</div>
+  </div>
+  <div class="live-badge">● LIVE SIM</div>
+</div>
+
+<!-- ACCESS GATE -->
+<div id="accessGate">
+  <div class="gate-wrap">
+    <div class="gate-box">
+      <div class="gate-logo">
+        <div class="gate-logo-mark">mPOS</div>
+        <div class="gate-logo-sub">Live Settlement Simulation</div>
+      </div>
+      <div class="gate-title">Simulation Access</div>
+      <div class="gate-subtitle">Watch a cross-border transaction flow through the mPOS engine in real time. Complete the form to proceed.</div>
+
+      <div id="gateForm">
+        <div class="ip-notice">
+          <strong>⚠️ INTELLECTUAL PROPERTY NOTICE</strong>
+          Proprietary and confidential property of Vershima Solomon Kwaghshi / PLeNat Technologies. Protected intellectual property. Viewing does not constitute permission to reproduce, replicate, derive, or commercialise. Unauthorised use is a violation of intellectual property law.
+        </div>
+        <input class="gate-input" type="text" id="gateName" placeholder="Full name *"/>
+        <input class="gate-input" type="email" id="gateEmail" placeholder="Email address *"/>
+        <input class="gate-input" type="text" id="gateCountry" placeholder="Country *"/>
+        <div class="gate-ack">
+          <div class="gate-ack-title">Acknowledgements</div>
+          <div class="gate-ack-item"><input type="checkbox" id="ack1"/><label for="ack1">I acknowledge this is confidential proprietary IP of PLeNat Technologies.</label></div>
+          <div class="gate-ack-item"><input type="checkbox" id="ack2"/><label for="ack2">I will not reproduce, replicate, or derive any system from concepts shown.</label></div>
+          <div class="gate-ack-item"><input type="checkbox" id="ack3"/><label for="ack3">I understand my identity is being recorded.</label></div>
+          <div class="gate-ack-item"><input type="checkbox" id="ack4"/><label for="ack4">I am accessing for evaluation purposes only.</label></div>
+        </div>
+        <button class="gate-btn" onclick="submitGate()">Access Simulation →</button>
+        <div class="gate-error" id="gateError">Please complete all fields and tick all acknowledgements.</div>
+      </div>
+
+      <div class="gate-success" id="gateSuccess">
+        <div class="s-icon">✅</div>
+        <div class="s-title">Access Granted</div>
+        <div class="s-sub">Your identity has been recorded. Enter the live simulation below.</div>
+        <div class="session-box">
+          <div style="font-size:10px;color:#8b949e;letter-spacing:1px;">SESSION</div>
+          <div class="session-id" id="sessionId"></div>
+        </div>
+        <button class="gate-btn" onclick="enterSim()">Enter Live Simulation →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SIMULATION APP -->
+<div class="sim-app" id="simApp">
+
+  <div class="session-bar" id="sessionBar">SESSION: — | mPOS LIVE SIMULATION | PLeNat Technologies</div>
+  <div class="info-bar">LIVE SETTLEMENT SIMULATION — BACKEND INFRASTRUCTURE — AUTHORISED ACCESS ONLY</div>
+
+  <!-- INPUT PANEL -->
+  <div class="input-panel">
+    <div class="input-row">
+      <div class="input-field">
+        <label>Send Amount (NGN ₦)</label>
+        <input type="number" id="sendAmount" placeholder="e.g. 205000" min="1000" oninput="previewCalc()"/>
+      </div>
+      <div class="input-field">
+        <label>Corridor</label>
+        <select id="corridor" onchange="previewCalc()">
+          <option value="NG-UK" data-rate="2050" data-symbol="£" data-currency="GBP">Nigeria → UK (GBP)</option>
+          <option value="NG-US" data-rate="1580" data-symbol="$" data-currency="USD">Nigeria → US (USD)</option>
+        </select>
+      </div>
+      <div class="input-field">
+        <label>Recipient Name</label>
+        <input type="text" id="recipientName" placeholder="e.g. John Adeyemi"/>
+      </div>
+      <button class="run-btn" id="runBtn" onclick="runSimulation()">▶ Run Simulation</button>
+    </div>
+  </div>
+
+  <!-- FLOW CANVAS -->
+  <div class="flow-canvas">
+
+    <!-- AMOUNT SUMMARY -->
+    <div class="amount-summary" id="amountSummary" style="display:none;">
+      <div class="amt-item">
+        <div class="amt-label">Sending</div>
+        <div class="amt-value" id="sumSending">—</div>
+      </div>
+      <div class="amt-divider"></div>
+      <div class="amt-item">
+        <div class="amt-label">Rate</div>
+        <div class="amt-value" id="sumRate">—</div>
+      </div>
+      <div class="amt-divider"></div>
+      <div class="amt-item">
+        <div class="amt-label">Fee (1.2%)</div>
+        <div class="amt-value gold" id="sumFee">—</div>
+      </div>
+      <div class="amt-divider"></div>
+      <div class="amt-item">
+        <div class="amt-label">Recipient Gets</div>
+        <div class="amt-value green" id="sumNet">—</div>
+      </div>
+    </div>
+
+    <!-- NODE 1: BANK -->
+    <div class="node idle" id="node-bank">
+      <div class="node-header">
+        <span class="node-icon">🏦</span>
+        <div>
+          <div class="node-title">Stanbic IBTC — Nigeria</div>
+          <div class="node-subtitle">Customer initiates international transfer inside bank app</div>
+        </div>
+        <div class="node-status" id="status-bank"><span class="badge badge-grey">Waiting</span></div>
+      </div>
+      <div class="node-body">
+        <div class="node-rows" id="bank-rows"></div>
+      </div>
+    </div>
+
+    <div class="connector" id="conn-1">
+      <div class="connector-line" id="conn-1-line"></div>
+      <div class="connector-arrow" id="conn-1-arrow">↓</div>
+      <div class="connector-label" id="conn-1-label">API Instruction</div>
+    </div>
+
+    <!-- NODE 2: ENGINE -->
+    <div class="node idle" id="node-engine">
+      <div class="node-header">
+        <span class="node-icon">⚙️</span>
+        <div>
+          <div class="node-title">mPOS Engine</div>
+          <div class="node-subtitle">Validates, screens, locks FX, assigns agents randomly</div>
+        </div>
+        <div class="node-status" id="status-engine"><span class="badge badge-grey">Waiting</span></div>
+      </div>
+      <div class="node-body">
+        <div class="step-list" id="engine-steps"></div>
+      </div>
+    </div>
+
+    <div class="connector" id="conn-2">
+      <div class="connector-line" id="conn-2-line"></div>
+      <div class="connector-arrow" id="conn-2-arrow">↓</div>
+      <div class="connector-label" id="conn-2-label">Agent Assignment</div>
+    </div>
+
+    <!-- NODE 3: AGENTS (split) -->
+    <div class="agent-split">
+
+      <div class="node idle" id="node-sender-agent">
+        <div class="node-header">
+          <span class="node-icon">🇳🇬</span>
+          <div>
+            <div class="node-title">Sender Agent</div>
+            <div class="node-subtitle">Nigeria — randomly assigned</div>
+          </div>
+          <div class="node-status" id="status-sender-agent"><span class="badge badge-grey">—</span></div>
+        </div>
+        <div class="node-body">
+          <div class="account-mini" id="sender-account">
+            <div class="am-label">Savings</div>
+            <div class="am-value" id="sa-savings">—</div>
+            <hr class="am-divider"/>
+            <div class="am-sub-label">International</div>
+            <div class="am-sub-value" id="sa-ledger">—</div>
+          </div>
+          <div class="node-rows" id="sender-agent-rows"></div>
+        </div>
+      </div>
+
+      <div class="node idle" id="node-recipient-agent">
+        <div class="node-header">
+          <span class="node-icon">🇬🇧</span>
+          <div>
+            <div class="node-title">Recipient Agent</div>
+            <div class="node-subtitle">UK — randomly assigned</div>
+          </div>
+          <div class="node-status" id="status-recipient-agent"><span class="badge badge-grey">—</span></div>
+        </div>
+        <div class="node-body">
+          <div class="account-mini" id="recipient-account">
+            <div class="am-label">Current</div>
+            <div class="am-value" id="ra-savings">—</div>
+            <hr class="am-divider"/>
+            <div class="am-sub-label">International</div>
+            <div class="am-sub-value" id="ra-ledger">—</div>
+          </div>
+          <div class="node-rows" id="recipient-agent-rows"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="connector" id="conn-3">
+      <div class="connector-line" id="conn-3-line"></div>
+      <div class="connector-arrow" id="conn-3-arrow">↓</div>
+      <div class="connector-label" id="conn-3-label">Local Payout Executed</div>
+    </div>
+
+    <!-- NODE 4: LOCAL PAYOUT -->
+    <div class="node idle" id="node-payout">
+      <div class="node-header">
+        <span class="node-icon">💸</span>
+        <div>
+          <div class="node-title">Local Payout — UK</div>
+          <div class="node-subtitle">Recipient agent pays locally via Faster Payments</div>
+        </div>
+        <div class="node-status" id="status-payout"><span class="badge badge-grey">Waiting</span></div>
+      </div>
+      <div class="node-body">
+        <div class="node-rows" id="payout-rows"></div>
+      </div>
+    </div>
+
+    <div class="connector" id="conn-4">
+      <div class="connector-line" id="conn-4-line"></div>
+      <div class="connector-arrow" id="conn-4-arrow">↓</div>
+      <div class="connector-label" id="conn-4-label">Ledger Posted</div>
+    </div>
+
+    <!-- NODE 5: LEDGER -->
+    <div class="ledger-split">
+      <div class="ledger-entry" id="ledger-ng">
+        <div class="ledger-title">🇳🇬 Nigeria Ledger</div>
+        <div class="ledger-row"><span class="lr-label">Fiat In</span><span class="lr-value" id="lng-fiat" style="color:#4CAF50;">—</span></div>
+        <div class="ledger-row"><span class="lr-label">Ledger Out</span><span class="lr-value" id="lng-ledger" style="color:#e53935;">—</span></div>
+        <div class="ledger-row"><span class="lr-label">Status</span><span class="lr-value" id="lng-status">—</span></div>
+      </div>
+      <div class="ledger-entry" id="ledger-uk">
+        <div class="ledger-title">🇬🇧 UK Ledger</div>
+        <div class="ledger-row"><span class="lr-label">Fiat Out</span><span class="lr-value" id="luk-fiat" style="color:#e53935;">—</span></div>
+        <div class="ledger-row"><span class="lr-label">Ledger In</span><span class="lr-value" id="luk-ledger" style="color:#4CAF50;">—</span></div>
+        <div class="ledger-row"><span class="lr-label">Status</span><span class="lr-value" id="luk-status">—</span></div>
+      </div>
+    </div>
+
+    <div class="connector" id="conn-5">
+      <div class="connector-line" id="conn-5-line"></div>
+      <div class="connector-arrow" id="conn-5-arrow">↓</div>
+      <div class="connector-label" id="conn-5-label">Settlement Complete</div>
+    </div>
+
+    <!-- SETTLED BOX -->
+    <div class="settled-box" id="settledBox">
+      <div class="settled-icon">✅</div>
+      <div class="settled-title">SETTLED</div>
+      <div class="settled-ref" id="settled-ref">MPOS-2026-00001</div>
+      <div class="settled-grid" id="settled-grid"></div>
+      <div style="font-size:11px;color:#8b949e;line-height:1.7;">
+        No money crossed the border in real time.<br/>
+        Local agents paid locally. International ledger balanced the obligation.<br/>
+        <span style="color:#C9972B;">Agents randomly assigned. Tier limits enforced. AML passed.</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-panel">
+    <div class="history-title">Transaction History</div>
+    <div id="historyList">
+      <div style="text-align:center;color:#484f58;font-size:11px;padding:16px;">No transactions yet. Run your first simulation above.</div>
+    </div>
+  </div>
+
+  <div class="ip-footer">
+    © PLeNat Technologies — mPOS is proprietary and confidential IP of Vershima Solomon Kwaghshi / PLeNat Technologies. All rights reserved. Unauthorised reproduction prohibited.
+  </div>
+
+</div>
+
+<script>
+  let simState = {
+    txCounter: 1, sessionId: '', running: false,
+    history: [],
+    agents: {
+      nigeria: [
+        { id: 'NG-004', location: 'Lagos', savings: 48500000, ledger: 24500000 },
+        { id: 'NG-011', location: 'Abuja', savings: 32100000, ledger: 18200000 },
+        { id: 'NG-019', location: 'Port Harcourt', savings: 21800000, ledger: 9400000 },
+      ],
+      uk: [
+        { id: 'UK-007', location: 'London', savings: 285000, ledger: 8200 },
+        { id: 'UK-013', location: 'Manchester', savings: 142000, ledger: 4100 },
+        { id: 'UK-021', location: 'Birmingham', savings: 98000, ledger: 2800 },
+      ]
+    }
+  };
+
+  function generateSessionId() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let id = 'SID-';
+    for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
+    return id;
+  }
+
+  async function submitGate() {
+    const name = document.getElementById('gateName').value.trim();
+    const email = document.getElementById('gateEmail').value.trim();
+    const country = document.getElementById('gateCountry').value.trim();
+    const ack1 = document.getElementById('ack1').checked;
+    const ack2 = document.getElementById('ack2').checked;
+    const ack3 = document.getElementById('ack3').checked;
+    const ack4 = document.getElementById('ack4').checked;
+
+    if (!name || !email || !country || !ack1 || !ack2 || !ack3 || !ack4) {
+      document.getElementById('gateError').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('gateError').style.display = 'none';
+    const sessionId = generateSessionId();
+    simState.sessionId = sessionId;
+
+    try {
+      await fetch('https://formspree.io/f/mqenlovg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: 'mPOS Simulation v2', name, email, country, sessionId, timestamp: new Date().toLocaleString() })
+      });
+    } catch(e) { console.log(e); }
+
+    document.getElementById('gateForm').style.display = 'none';
+    document.getElementById('sessionId').textContent = sessionId;
+    document.getElementById('gateSuccess').style.display = 'block';
+  }
+
+  function enterSim() {
+    document.getElementById('accessGate').style.display = 'none';
+    document.getElementById('simApp').style.display = 'block';
+    document.getElementById('sessionBar').textContent = 'SESSION: ' + simState.sessionId + '  |  mPOS LIVE SIMULATION  |  PLeNat Technologies';
+  }
+
+  function previewCalc() {
+    const amount = parseFloat(document.getElementById('sendAmount').value) || 0;
+    const sel = document.getElementById('corridor');
+    const opt = sel.options[sel.selectedIndex];
+    const rate = parseFloat(opt.dataset.rate);
+    const symbol = opt.dataset.symbol;
+    const currency = opt.dataset.currency;
+    if (amount > 0) {
+      const gross = amount / rate;
+      const fee = gross * 0.012;
+      const net = gross - fee;
+      document.getElementById('amountSummary').style.display = 'flex';
+      document.getElementById('sumSending').textContent = '₦' + Number(amount).toLocaleString();
+      document.getElementById('sumRate').textContent = `1 ${currency} = ₦${rate.toLocaleString()}`;
+      document.getElementById('sumFee').textContent = symbol + fee.toFixed(2);
+      document.getElementById('sumNet').textContent = symbol + net.toFixed(2);
+    }
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function setNode(id, state) {
+    const el = document.getElementById('node-' + id);
+    if (!el) return;
+    el.className = 'node ' + state;
+  }
+
+  function setStatus(id, html) {
+    const el = document.getElementById('status-' + id);
+    if (el) el.innerHTML = html;
+  }
+
+  function setConnector(id, active) {
+    const line = document.getElementById('conn-' + id + '-line');
+    const arrow = document.getElementById('conn-' + id + '-arrow');
+    const label = document.getElementById('conn-' + id + '-label');
+    if (line) line.classList.toggle('active', active);
+    if (arrow) arrow.classList.toggle('active', active);
+    if (label) label.classList.toggle('active', active);
+  }
+
+  function setLedgerEntry(id, active) {
+    const el = document.getElementById('ledger-' + id);
+    if (el) el.classList.toggle('active', active);
+  }
+
+  function addRow(containerId, label, value, valueClass = '') {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const row = document.createElement('div');
+    row.className = 'node-row';
+    row.innerHTML = `<span class="nr-label">${label}</span><span class="nr-value ${valueClass}">${value}</span>`;
+    el.appendChild(row);
+  }
+
+  function addStep(containerId, text, state = 'done') {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const icons = { done: '✓', active: '◉', pending: '○' };
+    const item = document.createElement('div');
+    item.className = 'step-item step-' + state;
+    item.innerHTML = `<span class="step-icon">${icons[state]}</span><span>${text}</span>`;
+    el.appendChild(item);
+  }
+
+  function clearNode(id) {
+    ['bank-rows', 'engine-steps', 'sender-agent-rows', 'recipient-agent-rows', 'payout-rows'].forEach(c => {
+      const el = document.getElementById(c);
+      if (el) el.innerHTML = '';
+    });
+  }
+
+  async function runSimulation() {
+    if (simState.running) return;
+    const amount = parseFloat(document.getElementById('sendAmount').value);
+    const recipientName = document.getElementById('recipientName').value.trim() || 'John Adeyemi';
+    if (!amount || amount < 1000) { alert('Please enter a valid NGN amount (minimum ₦1,000)'); return; }
+
+    simState.running = true;
+    document.getElementById('runBtn').disabled = true;
+    document.getElementById('settledBox').classList.remove('show');
+
+    const sel = document.getElementById('corridor');
+    const opt = sel.options[sel.selectedIndex];
+    const rate = parseFloat(opt.dataset.rate);
+    const symbol = opt.dataset.symbol;
+    const currency = opt.dataset.currency;
+    const gross = amount / rate;
+    const fee = gross * 0.012;
+    const net = gross - fee;
+    const buffer = gross * 0.002;
+    const distributed = gross * 0.010;
+    const ref = 'MPOS-2026-' + String(simState.txCounter).padStart(5, '0');
+    simState.txCounter++;
+
+    const ngAgents = simState.agents.nigeria;
+    const ukAgents = simState.agents.uk;
+    const senderAgent = ngAgents[Math.floor(Math.random() * ngAgents.length)];
+    const recipientAgent = ukAgents[Math.floor(Math.random() * ukAgents.length)];
+
+    // Reset all nodes
+    ['bank', 'engine', 'sender-agent', 'recipient-agent', 'payout'].forEach(n => { setNode(n, 'idle'); });
+    [1,2,3,4,5].forEach(c => setConnector(c, false));
+    ['ng','uk'].forEach(l => setLedgerEntry(l, false));
+    clearNode();
+    ['bank-rows','engine-steps','sender-agent-rows','recipient-agent-rows','payout-rows'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
+
+    document.getElementById('lng-fiat').textContent = '—';
+    document.getElementById('lng-ledger').textContent = '—';
+    document.getElementById('lng-status').textContent = '—';
+    document.getElementById('luk-fiat').textContent = '—';
+    document.getElementById('luk-ledger').textContent = '—';
+    document.getElementById('luk-status').textContent = '—';
+
+    // STEP 1: BANK
+    setNode('bank', 'active');
+    setStatus('bank', '<span class="badge badge-gold pulsing">Processing</span>');
+    window.scrollTo({ top: 200, behavior: 'smooth' });
+    await delay(600);
+
+    addRow('bank-rows', 'Transaction Ref', ref, 'blue');
+    addRow('bank-rows', 'Origin Bank', 'Stanbic IBTC 🇳🇬', '');
+    addRow('bank-rows', 'Amount', '₦' + Number(amount).toLocaleString(), '');
+    addRow('bank-rows', 'Corridor', `Nigeria → ${currency === 'GBP' ? 'UK' : 'US'}`, '');
+    addRow('bank-rows', 'Recipient', recipientName, '');
+    addRow('bank-rows', 'Customer KYC', 'Verified by bank ✓', 'green');
+    addRow('bank-rows', 'API Instruction', 'Sent to mPOS Engine', 'gold');
+
+    await delay(800);
+    setNode('bank', 'done');
+    setStatus('bank', '<span class="badge badge-green">Sent ✓</span>');
+
+    // CONNECTOR 1
+    setConnector(1, true);
+    await delay(600);
+
+    // STEP 2: ENGINE
+    setNode('engine', 'active');
+    setStatus('engine', '<span class="badge badge-gold pulsing">Validating</span>');
+    await delay(400);
+
+    const engineSteps = [
+      'Bank token authenticated',
+      'AML screening passed',
+      'Tier limits checked — within limit',
+      'FX rate locked: 1 ' + currency + ' = ₦' + rate.toLocaleString(),
+      'Scanning Nigeria agents in real time...',
+      'Sender agent randomly assigned: ' + senderAgent.id,
+      'Scanning UK agents in real time...',
+      'Recipient agent randomly assigned: ' + recipientAgent.id,
+      'Ledger balance locked — sender side',
+      'Fiat liquidity locked — recipient side',
+    ];
+
+    for (let i = 0; i < engineSteps.length; i++) {
+      await delay(350);
+      addStep('engine-steps', engineSteps[i], 'done');
+    }
+
+    await delay(400);
+    setNode('engine', 'done');
+    setStatus('engine', '<span class="badge badge-green">Complete ✓</span>');
+
+    // CONNECTOR 2
+    setConnector(2, true);
+    await delay(600);
+
+    // STEP 3: AGENTS
+    setNode('sender-agent', 'active');
+    setNode('recipient-agent', 'active');
+    setStatus('sender-agent', '<span class="badge badge-gold pulsing">Active</span>');
+    setStatus('recipient-agent', '<span class="badge badge-gold pulsing">Active</span>');
+
+    document.getElementById('sa-savings').textContent = '₦' + Number(senderAgent.savings).toLocaleString();
+    document.getElementById('sa-ledger').textContent = '₦' + Number(senderAgent.ledger).toLocaleString();
+    document.getElementById('ra-savings').textContent = '£' + Number(recipientAgent.savings).toLocaleString();
+    document.getElementById('ra-ledger').textContent = '£' + Number(recipientAgent.ledger).toFixed(2);
+
+    await delay(800);
+
+    // Update sender agent
+    senderAgent.savings += amount;
+    senderAgent.ledger -= amount;
+    document.getElementById('sa-savings').textContent = '₦' + Number(senderAgent.savings).toLocaleString();
+    document.getElementById('sa-ledger').textContent = '₦' + Number(senderAgent.ledger).toLocaleString();
+
+    addRow('sender-agent-rows', 'Agent', senderAgent.id + ' — ' + senderAgent.location, '');
+    addRow('sender-agent-rows', 'Fiat Received', '+₦' + Number(amount).toLocaleString(), 'green');
+    addRow('sender-agent-rows', 'Ledger Debited', '-₦' + Number(amount).toLocaleString(), 'red');
+    addRow('sender-agent-rows', 'Assignment', 'Random — sender unaware', 'gold');
+
+    await delay(600);
+
+    // Update recipient agent
+    recipientAgent.savings -= net;
+    recipientAgent.ledger += net;
+    document.getElementById('ra-savings').textContent = '£' + Number(recipientAgent.savings).toLocaleString();
+    document.getElementById('ra-ledger').textContent = '£' + Number(recipientAgent.ledger).toFixed(2);
+
+    addRow('recipient-agent-rows', 'Agent', recipientAgent.id + ' — ' + recipientAgent.location, '');
+    addRow('recipient-agent-rows', 'Fiat Locked', symbol + net.toFixed(2), 'gold');
+    addRow('recipient-agent-rows', 'Ledger Credited', '+' + symbol + net.toFixed(2), 'green');
+    addRow('recipient-agent-rows', 'Assignment', 'Random — sender unaware', 'gold');
+
+    await delay(600);
+    setNode('sender-agent', 'done');
+    setNode('recipient-agent', 'done');
+    setStatus('sender-agent', '<span class="badge badge-green">Settled ✓</span>');
+    setStatus('recipient-agent', '<span class="badge badge-green">Ready ✓</span>');
+
+    // CONNECTOR 3
+    setConnector(3, true);
+    await delay(600);
+
+    // STEP 4: PAYOUT
+    setNode('payout', 'active');
+    setStatus('payout', '<span class="badge badge-gold pulsing">Paying</span>');
+    await delay(500);
+
+    addRow('payout-rows', 'Recipient', recipientName, '');
+    addRow('payout-rows', 'Recipient Bank', 'UK Bank 🇬🇧', '');
+    addRow('payout-rows', 'Method', 'Faster Payments (local UK)', '');
+    addRow('payout-rows', 'Amount Paid', symbol + net.toFixed(2), 'green');
+    addRow('payout-rows', 'Cross-Border Movement', 'None — paid locally ✓', 'green');
+    addRow('payout-rows', 'Settlement Time', '⚡ Near Instant', 'green');
+
+    await delay(800);
+    setNode('payout', 'done');
+    setStatus('payout', '<span class="badge badge-green">Paid ✓</span>');
+
+    // CONNECTOR 4
+    setConnector(4, true);
+    await delay(500);
+
+    // STEP 5: LEDGER
+    document.getElementById('lng-fiat').textContent = '+₦' + Number(amount).toLocaleString();
+    document.getElementById('lng-ledger').textContent = '-₦' + Number(amount).toLocaleString();
+    document.getElementById('lng-status').innerHTML = '<span class="badge badge-green" style="font-size:9px;">Posted ✓</span>';
+
+    document.getElementById('luk-fiat').textContent = '-' + symbol + net.toFixed(2);
+    document.getElementById('luk-ledger').textContent = '+' + symbol + net.toFixed(2);
+    document.getElementById('luk-status').innerHTML = '<span class="badge badge-green" style="font-size:9px;">Posted ✓</span>';
+
+    setLedgerEntry('ng', true);
+    setLedgerEntry('uk', true);
+
+    await delay(500);
+
+    // CONNECTOR 5
+    setConnector(5, true);
+    await delay(600);
+
+    // SETTLED
+    document.getElementById('settled-ref').textContent = ref;
+    document.getElementById('settled-grid').innerHTML = `
+      <div class="settled-item"><div class="si-label">Sent</div><div class="si-value">₦${Number(amount).toLocaleString()}</div></div>
+      <div class="settled-item"><div class="si-label">Received</div><div class="si-value green">${symbol}${net.toFixed(2)}</div></div>
+      <div class="settled-item"><div class="si-label">Engine Fee</div><div class="si-value gold">1.2% — ${symbol}${fee.toFixed(2)}</div></div>
+      <div class="settled-item"><div class="si-label">Buffer Retained</div><div class="si-value" style="color:#e53935;">0.2% — ${symbol}${buffer.toFixed(2)}</div></div>
+      <div class="settled-item"><div class="si-label">Sender Agent</div><div class="si-value">${senderAgent.id} 🇳🇬</div></div>
+      <div class="settled-item"><div class="si-label">Recipient Agent</div><div class="si-value">${recipientAgent.id} 🇬🇧</div></div>
+    `;
+    document.getElementById('settledBox').classList.add('show');
+
+    // Add to history
+    simState.history.unshift({ ref, amount, gross, net, fee, symbol, senderAgent: senderAgent.id, recipientAgent: recipientAgent.id, time: new Date().toLocaleTimeString() });
+    renderHistory();
+
+    // Done
+    simState.running = false;
+    document.getElementById('runBtn').disabled = false;
+
+    window.scrollTo({ top: document.getElementById('settledBox').offsetTop - 20, behavior: 'smooth' });
+  }
+
+  function renderHistory() {
+    const el = document.getElementById('historyList');
+    if (simState.history.length === 0) { el.innerHTML = '<div style="text-align:center;color:#484f58;font-size:11px;padding:16px;">No transactions yet.</div>'; return; }
+    el.innerHTML = simState.history.slice(0, 5).map(tx => `
+      <div class="history-item">
+        <div>
+          <div class="hi-ref">${tx.ref}</div>
+          <div class="hi-detail">${tx.senderAgent} 🇳🇬 → ${tx.recipientAgent} 🇬🇧 &nbsp;|&nbsp; ${tx.time}</div>
+        </div>
+        <div class="hi-amount">
+          <div class="hi-sent">₦${Number(tx.amount).toLocaleString()}</div>
+          <div class="hi-received">${tx.symbol}${tx.net.toFixed(2)}</div>
+        </div>
+      </div>`).join('');
+  }
+</script>
+</body>
+</html>
